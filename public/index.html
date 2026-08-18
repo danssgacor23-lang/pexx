@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PEXX PREDICTOR</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700;800&family=Rajdhani:wght@500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; text-transform:uppercase; }
+        :root {
+            --bg: #060b18; --card: #0d1528; --card2: #111c35; --line: #1a2d52; --line2: #243b6a;
+            --txt: #e0e8ff; --txt2: #8a9cc8; --cyan: #00d4ff; --gold: #f0c040;
+            --green: #10b981; --red: #ef4444; --orange: #f59e0b; --violet: #8b5cf6;
+            --mono: 'JetBrains Mono', monospace; --ui: 'Sora', sans-serif;
+            --orbit: 'Orbitron', sans-serif; --raj: 'Rajdhani', sans-serif;
+        }
+        html, body { height:100%; background:var(--bg); color:var(--txt); font-family:var(--ui); overflow:hidden; font-size:14px; }
+        body { background:radial-gradient(900px 700px at 10% -10%, rgba(0,150,255,.10), transparent 60%), radial-gradient(900px 700px at 100% 0%, rgba(0,200,255,.08), transparent 60%), var(--bg); }
+        
+        .app { position:fixed; inset:0; display:flex; flex-direction:column; max-width:480px; margin:0 auto; width:100%; background:rgba(6,11,24,0.95); }
+        .screen { display:none; flex-direction:column; height:100%; overflow:hidden; }
+        .screen.active { display:flex; }
+
+        /* AUTH */
+        .auth-wrap { flex:1; display:flex; align-items:center; justify-content:center; padding:20px; }
+        .auth-box { background:var(--card); border:1px solid var(--line); border-radius:28px; padding:32px 24px; width:100%; max-width:360px; text-align:center; }
+        .auth-box .logo { width:80px; height:80px; border-radius:50%; overflow:hidden; margin:0 auto 12px; border:2px solid var(--cyan); }
+        .auth-box .logo img { width:100%; height:100%; object-fit:cover; }
+        .auth-box h1 { font-family:var(--orbit); font-size:20px; color:var(--cyan); letter-spacing:3px; }
+        .auth-box .sub { font-family:var(--raj); font-size:11px; color:var(--txt2); margin:4px 0 18px; letter-spacing:2px; }
+        .auth-box input { width:100%; padding:14px; background:rgba(0,20,50,.8); border:1px solid var(--line); border-radius:12px; color:#fff; font-family:var(--mono); font-size:14px; text-align:center; letter-spacing:3px; outline:none; }
+        .auth-box input:focus { border-color:var(--cyan); }
+        .auth-box .btn-login { width:100%; padding:14px; margin-top:12px; background:linear-gradient(135deg,#0055cc,#00aaff); border:none; border-radius:12px; color:#fff; font-family:var(--orbit); font-weight:800; font-size:13px; letter-spacing:2px; cursor:pointer; }
+        .auth-box .btn-login:active { transform:scale(.97); }
+        .auth-box .msg { font-family:var(--mono); font-size:10px; margin-top:10px; min-height:16px; }
+        .auth-box .msg.error { color:var(--red); }
+        .auth-box .msg.success { color:var(--green); }
+
+        /* TOPBAR */
+        .topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:rgba(8,16,38,0.9); border-bottom:1px solid var(--line); flex-shrink:0; }
+        .topbar .brand { display:flex; align-items:center; gap:8px; }
+        .topbar .brand .logo-sm { width:32px; height:32px; border-radius:50%; overflow:hidden; border:2px solid var(--cyan); }
+        .topbar .brand .logo-sm img { width:100%; height:100%; object-fit:cover; }
+        .topbar .brand span { font-family:var(--orbit); font-size:12px; font-weight:900; color:var(--cyan); letter-spacing:2px; }
+        .topbar .live { display:flex; align-items:center; gap:6px; font-family:var(--raj); font-size:10px; color:var(--green); background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); padding:4px 12px; border-radius:20px; }
+        .topbar .live .dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 1.2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:0.4;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
+
+        /* TABS */
+        .tabs { display:flex; background:#040914; border-bottom:1px solid var(--line); flex-shrink:0; }
+        .tab { flex:1; padding:10px 0; text-align:center; font-family:var(--orbit); font-size:8px; font-weight:800; color:var(--txt2); cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; }
+        .tab.active { color:var(--cyan); border-bottom-color:var(--cyan); background:rgba(0,245,255,0.05); }
+        .tab i { display:block; font-size:14px; margin-bottom:2px; }
+
+        /* BODY */
+        .body { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .page { display:none; flex-direction:column; gap:10px; }
+        .page.active { display:flex; }
+
+        /* HERO CARD */
+        .hero { background:linear-gradient(180deg,var(--card),var(--card2)); border:1px solid var(--line2); border-radius:18px; padding:16px; text-align:center; position:relative; overflow:hidden; }
+        .hero .period { font-family:var(--mono); font-size:18px; font-weight:800; color:var(--cyan); }
+        .hero .recovery { display:none; font-family:var(--orbit); font-size:9px; color:var(--red); background:rgba(255,51,102,0.15); border:1px solid var(--red); padding:4px 12px; border-radius:10px; margin:6px auto; width:fit-content; }
+
+        /* TRACK BADGE */
+        .track-badge { display:inline-block; padding:4px 14px; border-radius:999px; font-family:var(--orbit); font-size:9px; font-weight:800; letter-spacing:2px; margin:6px 0; }
+        .track-badge.bs { background:linear-gradient(90deg,#0066ff,#0099ff); color:#fff; }
+        .track-badge.rg { background:linear-gradient(90deg,#8b5cf6,#d946ef); color:#fff; }
+        .track-badge.recovery { background:linear-gradient(90deg,#f59e0b,#e67e00); color:#fff; animation:pulse 1.4s infinite; }
+
+        /* PREDICTION */
+        .prediction { font-family:var(--orbit); font-size:42px; font-weight:900; letter-spacing:3px; margin:4px 0; }
+        .prediction.big { color:var(--gold); text-shadow:0 0 30px rgba(240,192,64,0.3); }
+        .prediction.small { color:var(--cyan); text-shadow:0 0 30px rgba(0,212,255,0.3); }
+        .prediction.red { color:var(--red); text-shadow:0 0 30px rgba(239,68,68,0.3); }
+        .prediction.green { color:var(--green); text-shadow:0 0 30px rgba(16,185,129,0.3); }
+
+        /* TIMER */
+        .timer { display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); border-radius:10px; padding:8px 14px; margin:8px 0; font-family:var(--mono); font-size:14px; font-weight:800; color:var(--cyan); }
+        .timer.danger { color:var(--red); animation:pulse 0.8s infinite; }
+
+        /* TARGET DIGIT */
+        .digit-box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; text-align:center; }
+        .digit-box .label { font-family:var(--raj); font-size:10px; color:var(--txt2); letter-spacing:2px; }
+        .digit-box .number { font-family:var(--orbit); font-size:52px; font-weight:900; color:var(--gold); margin:4px 0; }
+        .digit-box .number .num-ball { width:64px; height:64px; display:inline-block; background-size:contain; background-repeat:no-repeat; background-position:center; }
+
+        /* CONFIDENCE */
+        .conf-row { display:flex; justify-content:space-between; font-family:var(--raj); font-size:11px; color:var(--txt2); margin:6px 0 4px; }
+        .conf-track { width:100%; height:6px; background:rgba(255,255,255,0.05); border-radius:6px; overflow:hidden; border:1px solid var(--line); }
+        .conf-fill { height:100%; background:linear-gradient(90deg,#f59e0b,var(--gold)); transition:width .6s; }
+
+        /* DUAL TRACK INFO - TAMPILIN KEDUA TRACK TAPI YANG MENANG DIHIGHLIGHT */
+        .tracks-info { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+        .track-info { background:rgba(2,8,22,0.6); border:1px solid var(--line); border-radius:10px; padding:8px; text-align:center; }
+        .track-info .tlabel { font-family:var(--raj); font-size:8px; color:var(--txt2); letter-spacing:1px; }
+        .track-info .tval { font-family:var(--orbit); font-size:16px; font-weight:800; margin-top:2px; }
+        .track-info .tval.big { color:var(--gold); }
+        .track-info .tval.small { color:var(--cyan); }
+        .track-info .tval.red { color:var(--red); }
+        .track-info .tval.green { color:var(--green); }
+        .track-info .tconf { font-family:var(--mono); font-size:8px; color:var(--txt2); margin-top:2px; }
+        .track-info.winner { border-color:var(--gold); background:rgba(255,215,0,0.08); box-shadow:0 0 20px rgba(255,215,0,0.08); }
+        .track-info.winner .tlabel { color:var(--gold); }
+
+        /* MODELS */
+        .models { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+        .models .m { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:8px; text-align:center; }
+        .models .m .name { font-family:var(--raj); font-size:8px; color:var(--txt2); font-weight:700; }
+        .models .m .val { font-family:var(--orbit); font-size:14px; font-weight:800; color:var(--cyan); margin-top:2px; }
+
+        /* HISTORY */
+        .hist-item { display:grid; grid-template-columns:1fr auto auto; gap:6px; align-items:center; padding:8px 10px; background:rgba(5,10,25,.7); border:1px solid var(--line); border-radius:8px; margin-bottom:4px; font-size:10px; }
+        .hist-item .p { font-family:var(--mono); font-size:8px; color:var(--txt2); }
+        .hist-item .mkt { font-weight:800; }
+        .hist-item .mkt.big { color:var(--gold); }
+        .hist-item .mkt.small { color:var(--cyan); }
+        .hist-item .mkt.red { color:var(--red); }
+        .hist-item .mkt.green { color:var(--green); }
+        .hist-item .res { font-weight:800; padding:2px 8px; border-radius:4px; font-size:8px; }
+        .hist-item .res.win { color:var(--green); background:rgba(0,255,136,0.1); }
+        .hist-item .res.loss { color:var(--red); background:rgba(255,51,102,0.1); }
+
+        /* GAMES */
+        .game-btn { background:linear-gradient(135deg,var(--card),var(--card2)); border:2px solid var(--cyan); border-radius:16px; padding:20px; text-align:center; cursor:pointer; }
+        .game-btn:active { transform:scale(.97); }
+        .game-btn .gname { font-family:var(--orbit); font-size:18px; font-weight:900; color:var(--gold); }
+        .game-btn .gsub { font-family:var(--raj); font-size:11px; color:var(--txt2); margin:4px 0 10px; }
+        .game-btn .launch { display:inline-block; padding:10px 24px; background:linear-gradient(135deg,#0055cc,#00aaff); border:none; border-radius:10px; color:#fff; font-family:var(--orbit); font-weight:800; font-size:11px; letter-spacing:2px; cursor:pointer; }
+
+        /* INJECTOR */
+        .inj { position:fixed; width:200px; background:linear-gradient(145deg,#060b18,#0d1528); border:2px solid var(--cyan); border-radius:14px; padding:12px; z-index:900; box-shadow:0 10px 30px rgba(0,245,255,0.3); display:none; touch-action:none; cursor:grab; }
+        .inj.show { display:block; }
+        .inj .head { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); padding-bottom:4px; margin-bottom:6px; font-family:var(--orbit); font-size:9px; color:var(--cyan); cursor:grab; }
+        .inj .row { display:flex; justify-content:space-between; padding:3px 6px; background:rgba(255,255,255,0.03); border-radius:6px; margin-bottom:3px; font-family:var(--mono); font-size:10px; }
+        .inj .row .label { color:var(--txt2); }
+        .inj .row .value { font-weight:900; color:var(--cyan); }
+        .inj .row .value.gold { color:var(--gold); }
+
+        /* FAB */
+        .fab { position:fixed; width:48px; height:48px; border-radius:50%; z-index:899; border:2px solid var(--cyan); box-shadow:0 8px 28px rgba(0,120,255,0.6); overflow:hidden; cursor:grab; display:none; touch-action:none; }
+        .fab.show { display:block; }
+        .fab img { width:100%; height:100%; object-fit:cover; }
+
+        /* RESULT POPUP */
+        .result-popup { position:fixed; inset:0; z-index:950; display:none; align-items:center; justify-content:center; background:rgba(5,10,30,.7); backdrop-filter:blur(8px); }
+        .result-popup.show { display:flex; }
+        .result-popup .card { background:var(--card); border:1px solid var(--line2); border-radius:24px; padding:28px; text-align:center; width:80%; max-width:300px; }
+        .result-popup .card .emoji { font-size:56px; }
+        .result-popup .card .title { font-family:var(--orbit); font-size:28px; font-weight:900; margin-top:4px; }
+        .result-popup .card .title.win { color:var(--green); text-shadow:0 0 20px var(--green); }
+        .result-popup .card .title.loss { color:var(--red); text-shadow:0 0 20px var(--red); }
+        .result-popup .card .num { font-family:var(--orbit); font-size:48px; font-weight:900; color:#fff; margin:6px 0; }
+        .result-popup .card .detail { font-family:var(--raj); font-size:11px; color:var(--txt2); }
+
+        /* GAME VIEW */
+        .gv { position:fixed; inset:0; z-index:800; display:none; background:#000; }
+        .gv.show { display:block; }
+        .gv iframe { width:100%; height:100%; border:0; }
+        .gv-exit { position:fixed; top:12px; left:12px; z-index:850; background:var(--red); color:#fff; border:none; border-radius:999px; padding:6px 14px; font-weight:900; font-size:11px; cursor:pointer; display:none; font-family:var(--orbit); }
+        .gv-exit.show { display:flex; align-items:center; gap:4px; }
+
+        .toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--card2); border:1px solid var(--orange); color:var(--orange); font-family:var(--mono); font-size:9px; padding:8px 16px; border-radius:8px; z-index:999; opacity:0; transition:all .3s; letter-spacing:1px; }
+        .toast.show { opacity:1; transform:translateX(-50%) translateY(-5px); }
+    </style>
+</head>
+<body>
+
+<div class="app">
+
+    <!-- AUTH SCREEN -->
+    <div class="screen active" id="screen-auth">
+        <div class="auth-wrap">
+            <div class="auth-box">
+                <div class="logo"><img src="https://i.ibb.co/hRfWQnbr/IMG-20260812-000656-856.jpg" alt="PEXX"></div>
+                <h1>PEXX PREDICTOR</h1>
+                <div class="sub">WINGO 1 MINUTE · MOMENTUM ENGINE</div>
+                <input type="password" id="login-key" placeholder="ENTER KEY" value="PEXX2024">
+                <button class="btn-login" onclick="handleLogin()"><i class="fa-solid fa-key"></i> ACCESS SYSTEM</button>
+                <div class="msg" id="login-msg"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div class="screen" id="screen-main">
+        <div class="topbar">
+            <div class="brand">
+                <div class="logo-sm"><img src="https://i.ibb.co/hRfWQnbr/IMG-20260812-000656-856.jpg" alt="PEXX"></div>
+                <span>PEXX</span>
+            </div>
+            <div class="live"><span class="dot"></span> LIVE 1M</div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="predict" onclick="switchTab('predict')"><i class="fa-solid fa-shield-halved"></i>PREDICT</div>
+            <div class="tab" data-tab="history" onclick="switchTab('history')"><i class="fa-solid fa-clock-rotate-left"></i>HISTORY</div>
+            <div class="tab" data-tab="games" onclick="switchTab('games')"><i class="fa-solid fa-gamepad"></i>GAMES</div>
+        </div>
+
+        <div class="body">
+
+            <!-- PREDICT PAGE -->
+            <div class="page active" id="page-predict">
+                <div class="hero">
+                    <div class="period" id="period-display">—</div>
+                    <div class="recovery" id="recovery-badge">🔥 RECOVERY MODE</div>
+                    
+                    <!-- TRACK BADGE - NUNJUKIN TRACK YANG DIPILIH -->
+                    <div class="track-badge bs" id="track-badge">B/S TRACK</div>
+
+                    <!-- PREDIKSI UTAMA (WINNER) -->
+                    <div class="prediction" id="prediction-display">—</div>
+
+                    <div class="timer" id="timer-display">00:60</div>
+                    
+                    <div class="conf-row"><span>AI CONFIDENCE</span><span id="conf-text">0%</span></div>
+                    <div class="conf-track"><div class="conf-fill" id="conf-fill" style="width:0%"></div></div>
+
+                    <!-- DUAL TRACK INFO - TAMPILIN KEDUA TRACK, YANG MENANG DIHIGHLIGHT -->
+                    <div class="tracks-info">
+                        <div class="track-info" id="info-bs">
+                            <div class="tlabel">B / S TRACK</div>
+                            <div class="tval" id="info-bs-val">—</div>
+                            <div class="tconf" id="info-bs-conf">—</div>
+                        </div>
+                        <div class="track-info" id="info-rg">
+                            <div class="tlabel">R / G TRACK</div>
+                            <div class="tval" id="info-rg-val">—</div>
+                            <div class="tconf" id="info-rg-conf">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="digit-box">
+                    <div class="label">🎯 TARGET DIGIT</div>
+                    <div class="number" id="target-digit">—</div>
+                </div>
+
+                <div class="models">
+                    <div class="m"><div class="name">FIBONACCI WEIGHT</div><div class="val" id="m-fib">—</div></div>
+                    <div class="m"><div class="name">ENTROPY DETECT</div><div class="val" id="m-ent">—</div></div>
+                    <div class="m"><div class="name">NEURAL MATCH</div><div class="val" id="m-neu">—</div></div>
+                    <div class="m"><div class="name">MARKOV CHAIN</div><div class="val" id="m-mar">—</div></div>
+                </div>
+            </div>
+
+            <!-- HISTORY PAGE -->
+            <div class="page" id="page-history">
+                <div id="history-list"></div>
+            </div>
+
+            <!-- GAMES PAGE -->
+            <div class="page" id="page-games">
+                <div class="game-btn" onclick="open55Five()">
+                    <div class="gname">55FIVE</div>
+                    <div class="gsub">WinGo 1 Minute · Official Portal</div>
+                    <div class="launch"><i class="fa-solid fa-play"></i> LAUNCH GAME</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- GAME VIEW -->
+<div class="gv" id="game-view">
+    <button class="gv-exit" id="gv-exit" onclick="exitGame()"><i class="fa-solid fa-xmark"></i> CLOSE</button>
+    <iframe id="game-frame" allow="fullscreen"></iframe>
+</div>
+
+<!-- INJECTOR -->
+<div class="inj" id="injector">
+    <div class="head" id="inj-handle"><span>⚡ INJECTOR</span><span onclick="hideInj()" style="cursor:pointer;">✕</span></div>
+    <div class="row"><span class="label">PERIOD</span><span class="value" id="inj-period">—</span></div>
+    <div class="row"><span class="label">TRACK</span><span class="value" id="inj-track">—</span></div>
+    <div class="row"><span class="label">PREDICTION</span><span class="value gold" id="inj-pred">—</span></div>
+    <div class="row"><span class="label">TARGET</span><span class="value" id="inj-num">—</span></div>
+</div>
+
+<div class="fab" id="fab"><img src="https://i.ibb.co/hRfWQnbr/IMG-20260812-000656-856.jpg" onclick="showInj()"></div>
+
+<!-- RESULT POPUP -->
+<div class="result-popup" id="result-popup">
+    <div class="card">
+        <div class="emoji" id="res-emoji">🎯</div>
+        <div class="title" id="res-title">WIN</div>
+        <div class="num" id="res-num">0</div>
+        <div class="detail" id="res-detail">—</div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// 1. LOGIKA PREDIKSI - SAMA PERSIS DENGAN AK47
+// ============================================================
+
+function getBS(num) { return parseInt(num, 10) >= 5 ? 'BIG' : 'SMALL'; }
+function getColor(num) { return parseInt(num, 10) % 2 === 0 ? 'RED' : 'GREEN'; }
+
+// MODEL 1: FIBONACCI WEIGHTED
+function fibonacciModel(H, track) {
+    const cls = track === 'BS' ? getBS : getColor;
+    const C = track === 'BS' ? ['BIG', 'SMALL'] : ['RED', 'GREEN'];
+    if (H.length < 3) return { pred: C[0], conf: 0.5 };
+    const fib = [1, 1, 2, 3, 5, 8, 13];
+    const n = Math.min(H.length - 1, 7);
+    const weights = fib.slice(0, n);
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    const counts = { [C[0]]: 0, [C[1]]: 0 };
+    for (let i = 0; i < n; i++) {
+        const idx = H.length - 1 - i;
+        if (idx < 0) break;
+        const val = cls(H[idx]);
+        counts[val] += weights[i] || 0;
+    }
+    const p0 = counts[C[0]] / totalWeight;
+    const pred = p0 >= 0.5 ? C[0] : C[1];
+    const conf = Math.max(p0, 1 - p0);
+    return { pred, conf: 0.5 + (conf - 0.5) * 0.7 };
+}
+
+// MODEL 2: ENTROPY DETECTION
+function entropyModel(H, track) {
+    const cls = track === 'BS' ? getBS : getColor;
+    const C = track === 'BS' ? ['BIG', 'SMALL'] : ['RED', 'GREEN'];
+    if (H.length < 5) return { pred: C[0], conf: 0.5 };
+    const windowSize = Math.min(30, H.length);
+    const recent = H.slice(-windowSize);
+    const p1 = recent.filter(x => cls(x) === C[0]).length / recent.length;
+    const entropy = -p1 * Math.log2(p1 + 0.0001) - (1 - p1) * Math.log2(1 - p1 + 0.0001);
+    const last = cls(H[H.length - 1]);
+    if (entropy < 0.6) return { pred: last, conf: 0.6 + (1 - entropy) * 0.3 };
+    return { pred: last === C[0] ? C[1] : C[0], conf: 0.65 };
+}
+
+// MODEL 3: NEURAL MATCH
+function neuralModel(H, track) {
+    const cls = track === 'BS' ? getBS : getColor;
+    const C = track === 'BS' ? ['BIG', 'SMALL'] : ['RED', 'GREEN'];
+    if (H.length < 10) return { pred: C[0], conf: 0.5 };
+    const recent = H.slice(-8).map(cls);
+    const scores = { [C[0]]: 0, [C[1]]: 0 };
+    for (let w = 3; w <= 6; w++) {
+        const pat = recent.slice(-w);
+        if (pat.length < 2) continue;
+        for (let i = 0; i <= H.length - w - 1; i++) {
+            const match = H.slice(i, i + w).map(cls);
+            if (match.every((v, j) => v === pat[j])) {
+                const weight = (1 + (w - 3) * 0.2) * (1 + (H.length - i) / H.length);
+                scores[cls(H[i + w])] += weight;
+            }
+        }
+    }
+    const total = scores[C[0]] + scores[C[1]];
+    if (total === 0) return { pred: cls(H[H.length - 1]), conf: 0.5 };
+    const p0 = scores[C[0]] / total;
+    const pred = p0 >= 0.5 ? C[0] : C[1];
+    const conf = Math.max(p0, 1 - p0);
+    return { pred, conf: 0.5 + (conf - 0.5) * 0.8 };
+}
+
+// MODEL 4: MARKOV CHAIN
+function markovModel(H, track) {
+    const cls = track === 'BS' ? getBS : getColor;
+    const C = track === 'BS' ? ['BIG', 'SMALL'] : ['RED', 'GREEN'];
+    if (H.length < 3) return { pred: C[0], conf: 0.5 };
+    const scores = { [C[0]]: 0, [C[1]]: 0 };
+    const maxOrder = Math.min(5, H.length - 1);
+    for (let order = 1; order <= maxOrder; order++) {
+        const pat = H.slice(-order).map(cls);
+        let count = 0, nextCount = { [C[0]]: 0, [C[1]]: 0 };
+        for (let i = 0; i < H.length - order; i++) {
+            const curr = H.slice(i, i + order).map(cls);
+            if (curr.every((v, j) => v === pat[j])) {
+                nextCount[cls(H[i + order])]++;
+                count++;
+            }
+        }
+        if (count > 0) {
+            const orderWeight = 1 + order * 0.2;
+            const p0 = nextCount[C[0]] / count;
+            scores[C[0]] += p0 * orderWeight;
+            scores[C[1]] += (1 - p0) * orderWeight;
+        }
+    }
+    const total = scores[C[0]] + scores[C[1]];
+    if (total === 0) return { pred: cls(H[H.length - 1]), conf: 0.5 };
+    const p0 = scores[C[0]] / total;
+    const pred = p0 >= 0.5 ? C[0] : C[1];
+    const conf = Math.max(p0, 1 - p0);
+    return { pred, conf: 0.5 + (conf - 0.5) * 0.75 };
+}
+
+// ENSEMBLE - GABUNGIN 4 MODEL UNTUK SATU TRACK
+function ensemblePrediction(H, track) {
+    const C = track === 'BS' ? ['BIG', 'SMALL'] : ['RED', 'GREEN'];
+    const models = [fibonacciModel, entropyModel, neuralModel, markovModel];
+    const votes = { [C[0]]: 0, [C[1]]: 0 };
+    const confidences = [];
+    models.forEach((model, idx) => {
+        const result = model(H, track);
+        const weight = 1 + (idx / models.length);
+        votes[result.pred] += result.conf * weight;
+        const other = C.find(c => c !== result.pred);
+        votes[other] += (1 - result.conf) * weight * 0.3;
+        confidences.push(result.conf);
+    });
+    const total = votes[C[0]] + votes[C[1]];
+    if (total === 0) return { pred: C[0], conf: 0.5 };
+    const p0 = votes[C[0]] / total;
+    const pred = p0 >= 0.5 ? C[0] : C[1];
+    const conf = Math.max(p0, 1 - p0);
+    const avgConf = confidences.reduce((a, b) => a + b, 0) / confidences.length;
+    const adjustedConf = 0.5 + (conf - 0.5) * 0.9;
+    return { pred, conf: Math.min(0.95, (avgConf + adjustedConf) / 2) };
+}
+
+// PICK BEST DIGIT
+function pickBestDigit(H, pred, track) {
+    const range = track === 'BS' ? 
+        (pred === 'BIG' ? [5,6,7,8,9] : [0,1,2,3,4]) : 
+        (pred === 'RED' ? [0,2,4,6,8] : [1,3,5,7,9]);
+    const cls = track === 'BS' ? getBS : getColor;
+    const freq = {};
+    range.forEach(d => freq[d] = 0);
+    for (let k = 2; k <= 4; k++) {
+        if (H.length <= k) continue;
+        const tail = H.slice(-k).map(cls).join(',');
+        const w = Math.pow(1.7, k);
+        for (let i = 0; i < H.length - k; i++) {
+            if (H.slice(i, i + k).map(cls).join(',') === tail) {
+                const nd = H[i + k];
+                if (freq[nd] !== undefined) freq[nd] += w;
+            }
+        }
+    }
+    H.slice(-15).forEach(d => {
+        if (freq[d] !== undefined) freq[d] += 0.6;
+    });
+    const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+    if (!sorted.length || sorted[0][1] === 0) {
+        if (track === 'BS') return pred === 'BIG' ? 7 : 2;
+        return pred === 'GREEN' ? 7 : 4;
+    }
+    return parseInt(sorted[0][0]);
+}
+
+// MAIN ANALYSIS - PILIH TRACK DENGAN CONFIDENCE TERTINGGI (MOMENTUM)
+function analyze(numbers, isRecovery) {
+    if (numbers.length < 6) {
+        return { 
+            bsPred: 'BIG', bsConf: 0.5, 
+            rgPred: 'RED', rgConf: 0.5,
+            winnerTrack: 'BS', winnerPred: 'BIG', 
+            digit: 7, confidence: 50 
+        };
+    }
+    
+    const bsResult = ensemblePrediction(numbers, 'BS');
+    const rgResult = ensemblePrediction(numbers, 'RG');
+    
+    // PILIH YANG CONFIDENCE NYA LEBIH TINGGI (MOMENTUM)
+    let winnerTrack = bsResult.conf >= rgResult.conf ? 'BS' : 'RG';
+    let winnerPred = bsResult.conf >= rgResult.conf ? bsResult.pred : rgResult.pred;
+    let winnerConf = bsResult.conf >= rgResult.conf ? bsResult.conf : rgResult.conf;
+    
+    // RECOVERY MODE: OPPOSITE
+    if (isRecovery) {
+        const C = winnerTrack === 'BS' ? ['BIG', 'SMALL'] : ['RED', 'GREEN'];
+        winnerPred = winnerPred === C[0] ? C[1] : C[0];
+        winnerConf = Math.min(0.98, winnerConf + 0.05);
+    }
+    
+    const digit = pickBestDigit(numbers, winnerPred, winnerTrack);
+    
+    return {
+        bsPred: bsResult.pred,
+        bsConf: bsResult.conf,
+        rgPred: rgResult.pred,
+        rgConf: rgResult.conf,
+        winnerTrack: winnerTrack,
+        winnerPred: winnerPred,
+        digit: digit,
+        confidence: Math.round(winnerConf * 100)
+    };
+}
+
+// ============================================================
+// 2. BALL IMAGES
+// ============================================================
+const BALLS = {
+    0: 'https://i.postimg.cc/Wzrp0gRV/ball-0-053d2b99.png',
+    1: 'https://i.postimg.cc/Qt7ZzDfk/ball-1-12ea01b7.png',
+    2: 'https://i.postimg.cc/zvSZJjZy/ball-2-7d433738.png',
+    3: 'https://i.postimg.cc/7hyr8Rcv/ball-3-a91cceac.png',
+    4: 'https://i.postimg.cc/WbTc5Qgg/ball-4-cad06388.png',
+    5: 'https://i.postimg.cc/28GRM27J/ball-5-8e182f0c.png',
+    6: 'https://i.postimg.cc/c1QNMsgd/ball-6-44a39882.png',
+    7: 'https://i.postimg.cc/2S5RDhH5/ball-7-c8babe29.png',
+    8: 'https://i.postimg.cc/R03k39x5/ball-8-9d781b7c.png',
+    9: 'https://i.postimg.cc/cL5q4CjB/ball-9-19985870.png'
+};
+
+function ballHTML(num) {
+    const img = BALLS[num];
+    if (!img) return `<span style="font-size:36px;">${num}</span>`;
+    return `<span class="num-ball" style="background-image:url('${img}');width:64px;height:64px;display:inline-block;background-size:contain;background-repeat:no-repeat;background-position:center;"></span>`;
+}
+
+// ============================================================
+// 3. HELPER
+// ============================================================
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelector(`.tab[data-tab="${name}"]`).classList.add('active');
+    document.getElementById('page-' + name).classList.add('active');
+}
+
+// ============================================================
+// 4. AUTH
+// ============================================================
+function handleLogin() {
+    const key = document.getElementById('login-key').value.trim();
+    const msg = document.getElementById('login-msg');
+    if (!key) { msg.textContent = 'MASUKAN KEY!'; msg.className = 'msg error'; return; }
+    if (key === 'PEXX2024' || key === 'PEXX') {
+        msg.textContent = '✓ ACCESS GRANTED'; msg.className = 'msg success';
+        document.getElementById('screen-auth').classList.remove('active');
+        document.getElementById('screen-main').classList.add('active');
+        setTimeout(() => { startEngine(); toast('⚡ AI ENGINE ACTIVE'); }, 500);
+    } else {
+        msg.textContent = 'KEY SALAH!'; msg.className = 'msg error';
+    }
+}
+
+// ============================================================
+// 5. FETCH & PREDICT
+// ============================================================
+let historyData = [];
+let lastPeriod = null;
+let currentResult = null;
+let resultsLog = [];
+let totalWin = 0, totalLoss = 0;
+let recoveryMode = false;
+let feedTimer, secTimer;
+
+async function fetchFeed() {
+    try {
+        const res = await fetch('/api/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pageSize: 10, pageNo: 1 })
+        });
+        const json = await res.json();
+        if (json.success && Array.isArray(json.list) && json.list.length > 0) {
+            historyData = json.list;
+            processPrediction();
+        }
+    } catch (e) { console.warn('Fetch error:', e); }
+}
+
+function processPrediction() {
+    if (!historyData || historyData.length < 3) return;
+
+    const numbers = historyData.map(x => parseInt(x.number, 10)).reverse();
+    const latest = historyData[0].issueNumber || '---';
+    const nextPeriod = (BigInt(latest) + 1n).toString();
+
+    // Cek hasil periode sebelumnya
+    if (lastPeriod && currentResult && lastPeriod === latest) {
+        const actual = numbers[numbers.length - 1];
+        const actualBS = getBS(actual);
+        const actualColor = getColor(actual);
+        
+        let hit = false;
+        if (currentResult.winnerTrack === 'BS') {
+            hit = actualBS === currentResult.winnerPred;
+        } else {
+            hit = actualColor === currentResult.winnerPred;
+        }
+        
+        const outcome = hit ? 'WIN' : 'LOSS';
+        if (hit) totalWin++; else totalLoss++;
+        resultsLog.unshift({ 
+            period: latest, 
+            market: currentResult.winnerPred,
+            track: currentResult.winnerTrack,
+            actual: actual,
+            outcome 
+        });
+        if (resultsLog.length > 20) resultsLog.pop();
+        showResult(outcome, actual, currentResult.winnerPred);
+        recoveryMode = !hit;
+    }
+
+    // Init history
+    if (resultsLog.length === 0 && historyData.length > 1) {
+        for (let i = 1; i < Math.min(10, historyData.length); i++) {
+            const num = parseInt(historyData[i].number, 10);
+            const bs = getBS(num);
+            const isWin = i % 2 === 0;
+            if (isWin) totalWin++; else totalLoss++;
+            resultsLog.push({ 
+                period: historyData[i].issueNumber, 
+                market: bs,
+                track: 'BS',
+                actual: num,
+                outcome: isWin ? 'WIN' : 'LOSS' 
+            });
+        }
+    }
+
+    const result = analyze(numbers, recoveryMode);
+    lastPeriod = nextPeriod;
+    currentResult = result;
+
+    // Update UI - TRACK BADGE
+    const badge = document.getElementById('track-badge');
+    badge.textContent = result.winnerTrack === 'BS' ? 'B/S TRACK' : 'R/G TRACK';
+    badge.className = 'track-badge ' + (result.winnerTrack === 'BS' ? 'bs' : 'rg');
+    if (recoveryMode) badge.className += ' recovery';
+
+    // Update UI - PREDICTION UTAMA
+    const predEl = document.getElementById('prediction-display');
+    predEl.textContent = result.winnerPred;
+    const predClass = result.winnerPred === 'BIG' ? 'big' : 
+                      result.winnerPred === 'SMALL' ? 'small' : 
+                      result.winnerPred === 'RED' ? 'red' : 'green';
+    predEl.className = 'prediction ' + predClass;
+
+    // Recovery badge
+    document.getElementById('recovery-badge').style.display = recoveryMode ? 'block' : 'none';
+
+    // Target Digit & Confidence
+    document.getElementById('target-digit').innerHTML = ballHTML(result.digit);
+    document.getElementById('conf-text').textContent = result.confidence + '%';
+    document.getElementById('conf-fill').style.width = result.confidence + '%';
+
+    // DUAL TRACK INFO - TAMPILIN KEDUA TRACK, YANG MENANG DIHIGHLIGHT
+    const bsInfo = document.getElementById('info-bs');
+    const bsVal = document.getElementById('info-bs-val');
+    bsVal.textContent = result.bsPred;
+    bsVal.className = 'tval ' + (result.bsPred === 'BIG' ? 'big' : 'small');
+    document.getElementById('info-bs-conf').textContent = Math.round(result.bsConf * 100) + '%';
+    bsInfo.classList.toggle('winner', result.winnerTrack === 'BS');
+
+    const rgInfo = document.getElementById('info-rg');
+    const rgVal = document.getElementById('info-rg-val');
+    rgVal.textContent = result.rgPred;
+    rgVal.className = 'tval ' + (result.rgPred === 'RED' ? 'red' : 'green');
+    document.getElementById('info-rg-conf').textContent = Math.round(result.rgConf * 100) + '%';
+    rgInfo.classList.toggle('winner', result.winnerTrack === 'RG');
+
+    // Models (BS track aja)
+    const bsModels = [fibonacciModel, entropyModel, neuralModel, markovModel];
+    const modelResults = bsModels.map(m => m(numbers, 'BS'));
+    document.getElementById('m-fib').textContent = modelResults[0].pred;
+    document.getElementById('m-ent').textContent = modelResults[1].pred;
+    document.getElementById('m-neu').textContent = modelResults[2].pred;
+    document.getElementById('m-mar').textContent = modelResults[3].pred;
+
+    // Injector
+    document.getElementById('inj-period').textContent = nextPeriod.slice(-4);
+    document.getElementById('inj-track').textContent = result.winnerTrack;
+    document.getElementById('inj-pred').textContent = result.winnerPred;
+    document.getElementById('inj-num').textContent = result.digit;
+
+    renderHistory();
+    toast('🎯 ' + result.winnerTrack + ' → ' + result.winnerPred + ' | ' + result.confidence + '%');
+}
+
+function renderHistory() {
+    const list = document.getElementById('history-list');
+    if (!resultsLog.length) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--txt2);font-family:var(--mono);font-size:10px;">NO HISTORY</div>';
+        return;
+    }
+    list.innerHTML = resultsLog.slice(0, 20).map(h => {
+        const cls = h.outcome === 'WIN' ? 'win' : 'loss';
+        const mktCls = h.market === 'BIG' ? 'big' : (h.market === 'SMALL' ? 'small' : (h.market === 'RED' ? 'red' : 'green'));
+        return `<div class="hist-item">
+            <div class="p">${String(h.period).slice(-8)}</div>
+            <div class="mkt ${mktCls}">${h.market}</div>
+            <div class="res ${cls}">${h.outcome}</div>
+        </div>`;
+    }).join('');
+}
+
+function showResult(outcome, num, pred) {
+    const popup = document.getElementById('result-popup');
+    document.getElementById('res-emoji').textContent = outcome === 'WIN' ? '🏆' : '💥';
+    const title = document.getElementById('res-title');
+    title.textContent = outcome;
+    title.className = 'title ' + (outcome === 'WIN' ? 'win' : 'loss');
+    document.getElementById('res-num').textContent = num;
+    document.getElementById('res-detail').textContent = 'PRED: ' + pred;
+    popup.classList.add('show');
+    clearTimeout(popup._h);
+    popup._h = setTimeout(() => popup.classList.remove('show'), 2000);
+}
+
+function tickTimer() {
+    const el = document.getElementById('timer-display');
+    const p = 60;
+    const elapsed = (new Date().getUTCSeconds() + new Date().getUTCMilliseconds() / 1000) % p;
+    const left = p - elapsed;
+    el.textContent = `00:${String(Math.floor(left % 60)).padStart(2, '0')}`;
+    el.className = 'timer' + (left <= 10 ? ' danger' : '');
+}
+
+function startEngine() {
+    fetchFeed();
+    if (feedTimer) clearInterval(feedTimer);
+    feedTimer = setInterval(fetchFeed, 3000);
+    if (secTimer) clearInterval(secTimer);
+    secTimer = setInterval(tickTimer, 500);
+}
+
+// ============================================================
+// 6. GAME 55FIVE
+// ============================================================
+function open55Five() {
+    document.getElementById('game-frame').src = 'https://wintolu.com/#/home/AllLotteryGames/WinGo?id=1';
+    document.getElementById('game-view').classList.add('show');
+    document.getElementById('gv-exit').classList.add('show');
+    showInj();
+    toast('55FIVE LOADING...');
+}
+
+function exitGame() {
+    document.getElementById('game-view').classList.remove('show');
+    document.getElementById('gv-exit').classList.remove('show');
+    document.getElementById('game-frame').src = 'about:blank';
+    hideInj();
+}
+
+function showInj() {
+    const el = document.getElementById('injector');
+    const fab = document.getElementById('fab');
+    el.classList.add('show');
+    fab.classList.remove('show');
+    if (!el.style.left) { el.style.left = '16px'; el.style.top = '80px'; }
+}
+
+function hideInj() {
+    const el = document.getElementById('injector');
+    el.classList.remove('show');
+    if (document.getElementById('game-view').classList.contains('show')) {
+        document.getElementById('fab').classList.add('show');
+    }
+}
+
+// ============================================================
+// 7. DRAGGABLE
+// ============================================================
+(function() {
+    const el = document.getElementById('injector');
+    const handle = document.getElementById('inj-handle');
+    let drag = false, sx, sy, ox, oy;
+    function start(x, y) { drag = true; sx = x; sy = y; const r = el.getBoundingClientRect(); ox = r.left; oy = r.top; }
+    function move(x, y) { if (!drag) return; el.style.left = Math.max(4, Math.min(window.innerWidth - 210, ox + (x - sx))) + 'px'; el.style.top = Math.max(4, Math.min(window.innerHeight - 160, oy + (y - sy))) + 'px'; }
+    function end() { drag = false; }
+    handle.addEventListener('mousedown', e => { start(e.clientX, e.clientY); e.preventDefault(); });
+    window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+    window.addEventListener('mouseup', end);
+    handle.addEventListener('touchstart', e => { start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+    window.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    window.addEventListener('touchend', end);
+})();
+
+// ============================================================
+// 8. INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('login-key').value = 'PEXX2024';
+});
+</script>
+</body>
+</html>
