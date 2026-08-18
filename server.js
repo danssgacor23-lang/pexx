@@ -5,8 +5,8 @@ const path = require('path');
 const app = express();
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
+// Endpoint API 55five
 app.post('/api/history', async (req, res) => {
   try {
     const payload = {
@@ -34,6 +34,48 @@ app.post('/api/history', async (req, res) => {
     if (apiData && apiData.data && Array.isArray(apiData.data.list)) {
       historyList = apiData.data.list;
     } else if (apiData && Array.isArray(apiData.data)) {
+      historyList = apiData.data;
+    }
+
+    if (historyList.length > 0) {
+      return res.json({ success: true, list: historyList });
+    }
+
+    res.json({ success: false, list: [] });
+
+  } catch (error) {
+    console.error("❌ API Offline / Fail, Menggunakan Mock Data Fallback:", error.message);
+
+    // Fallback Data Simulasi jika server API offline
+    const currentPeriod = BigInt(Math.floor(Date.now() / 60000)) + 202607280000n;
+    const mockList = Array.from({ length: 10 }, (_, i) => {
+      const num = Math.floor(Math.random() * 10);
+      return {
+        issueNumber: (currentPeriod - BigInt(i)).toString(),
+        number: num,
+        colour: num === 0 ? "redviolet" : num === 5 ? "greenviolet" : num % 2 === 0 ? "red" : "green"
+      };
+    });
+
+    return res.json({ success: true, list: mockList, isMock: true });
+  }
+});
+
+// Khusus pengujian lokal di Termux
+if (require.main === module) {
+  app.use(express.static(path.join(__dirname, 'public')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
+
       historyList = apiData.data;
     }
 
